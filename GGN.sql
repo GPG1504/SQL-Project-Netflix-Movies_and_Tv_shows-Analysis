@@ -138,15 +138,70 @@ GROUP BY 1;
 
 -- 10.Find each year and the average numbers of content release in India on netflix.return top 5 year with highest avg content release!
 -- Calculate and rank years by the average number of content releases by India.
-/*11. List All Movies that are Documentaries. Retrieve all movies classified as documentaries.
-12. Find All Content Without a Director. List content that does not have a director.
-13. Find How Many Movies Actor 'Salman Khan' Appeared in the Last 10 Years. Count the number of movies featuring 'Salman Khan' 
-in the last 10 years.
-14. Find the Top 10 Actors Who Have Appeared in the Highest Number of Movies Produced in India. Identify the top 10 actors with the
-most appearances in Indian-produced movies.
-15. Categorize Content Based on the Presence of 'Kill' and 'Violence' Keywords.
-Categorize content as 'Bad' if it contains 'kill' or 'violence' and 'Good' otherwise. Count the number of items in each category.*/
+
+
+SELECT 
+	country,
+	release_year,
+	COUNT(show_id) as total_release,
+	ROUND(
+		COUNT(show_id)::numeric/
+								(SELECT COUNT(show_id) FROM netflix WHERE country = 'India')::numeric * 100 
+		,2
+		)
+		as avg_release
+FROM netflix
+WHERE country = 'India' 
+GROUP BY country, 2
+ORDER BY avg_release DESC 
+LIMIT 5
+
+-- 11. List All Movies that are Documentaries. Retrieve all movies classified as documentaries.
+
+SELECT * FROM netflix
+WHERE listed_in LIKE '%Documentaries'
+
 -- 12. Find All Content Without a Director
 SELECT * 
 FROM netflix
 WHERE director IS NULL;
+
+--13. Find How Many Movies Actor 'Salman Khan' Appeared in the Last 10 Years. Count the number of movies featuring 'Salman Khan' 
+--in the last 10 years.
+
+SELECT * FROM netflix
+WHERE 
+	casts LIKE '%Salman Khan%'
+	AND 
+	release_year > EXTRACT(YEAR FROM CURRENT_DATE) - 10
+	
+--14. Find the Top 10 Actors Who Have Appeared in the Highest Number of Movies Produced in India. Identify the top 10 actors with the
+--most appearances in Indian-produced movies.
+
+SELECT 
+	UNNEST(STRING_TO_ARRAY(casts, ',')) as actor,
+	COUNT(*)
+FROM netflix
+WHERE country = 'India'
+GROUP BY 1
+ORDER BY 2 DESC
+LIMIT 10
+
+--15. Categorize Content Based on the Presence of 'Kill' and 'Violence' Keywords.
+--Categorize content as 'Bad' if it contains 'kill' or 'violence' and 'Good' otherwise. Count the number of items in each category.*/
+
+SELECT 
+    category,
+	TYPE,
+    COUNT(*) AS content_count
+FROM (
+    SELECT 
+		*,
+        CASE 
+            WHEN description ILIKE '%kill%' OR description ILIKE '%violence%' THEN 'Bad'
+            ELSE 'Good'
+        END AS category
+    FROM netflix
+) AS categorized_content
+GROUP BY 1,2
+ORDER BY 2
